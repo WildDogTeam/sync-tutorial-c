@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include <string.h> 
 #include "wilddog.h"
-#include <signal.h>
+
 #define DEMO_AUGEND "augend"
 #define DEMO_ADDEND "addend"
 #define DEMO_SUM "sum"
