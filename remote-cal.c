@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include <string.h> 
 #include "wilddog.h"
-
+#include <signal.h>
 #define DEMO_AUGEND "augend"
 #define DEMO_ADDEND "addend"
 #define DEMO_SUM "sum"
@@ -44,16 +44,20 @@ STATIC Wilddog_Node_T *node_get(Wilddog_Node_T *p_head,const char* key_name)
 	return NULL;
 }
 /* count sum and set to server */
-STATIC Wilddog_Return_T sum_count(const Wilddog_Node_T *p_sn,Wilddog_T wilddog)
+STATIC Wilddog_Return_T sum_count(const Wilddog_Node_T *p_snapshot,Wilddog_T wilddog)
 {
 	static s32 old_augend = 0;
 	static s32 old_addend = 0;
-    Wilddog_Node_T *p_node,*p_augend,*p_addend,*p_sum;
+    Wilddog_Node_T *p_node,*p_augend,*p_addend,*p_sum, *p_sn = NULL;
 	int len ;
 	s32 augend ,addend ,sum;
-	if( !p_sn || !p_sn->p_wn_child)
+	p_sn = wilddog_node_clone(p_snapshot);
+	if( !p_sn || !p_sn->p_wn_child){
+		wilddog_node_delete(p_sn);
 		return WILDDOG_ERR_NULL;
+	}
 	/*find sum/augend/addend node */
+	
 	p_node = p_sn->p_wn_child;
 	p_augend = node_get(p_node,DEMO_AUGEND);
 	p_addend = node_get(p_node,DEMO_ADDEND);
@@ -61,22 +65,25 @@ STATIC Wilddog_Return_T sum_count(const Wilddog_Node_T *p_sn,Wilddog_T wilddog)
 	if( !p_augend || !p_addend || !p_sum )
 	{
 		wilddog_debug("deficiency of data !");
+		wilddog_node_delete(p_sn);
 		return WILDDOG_ERR_NULL;
 	}
 	/* add */
 	augend = *(s32*)wilddog_node_getValue(p_augend,&len);	
 	addend = *(s32*)wilddog_node_getValue(p_addend,&len);
 	if(old_augend == augend && old_addend == addend){
+		wilddog_node_delete(p_sn);
 		return WILDDOG_ERR_NOERR;
 	}
 	old_augend = augend;
 	old_addend = addend;
 
 	sum = augend + addend;
+	
 	wilddog_node_setValue(p_sum,(u8*)&sum,sizeof(sum));
 	printf("sum count : %ld + %ld = %ld\n",augend,addend,sum);
 	wilddog_setValue(wilddog,(Wilddog_Node_T*)p_sn,sumSet_callback,NULL);
-
+	wilddog_node_delete(p_sn);
 	return WILDDOG_ERR_NOERR;
 }
 /* notify call back  */
